@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>은행 무인기기(STM/ITM) 설치 시뮬레이터</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<h1>서울 25개 구 · 은행 무인금융기기(STM/ITM) 설치 시뮬레이터</h1>
+<p class="subtitle">동작구 실측 3개 은행(우리·신한·하나) 기반 · Sakasegawa G/G/c 근사식 · SLA 2단계 최적화</p>
+
+<div class="banner">
+  은행마다 지점 위치와 고객층이 다르므로, 은행을 선택하면 그 은행의 실측 서비스시간·변동계수와
+  해당 구의 그 은행 지점수를 기준으로 λ·창구인력을 다시 계산합니다.
+</div>
+
+<div class="row3">
+  <div>
+    <label>구 선택</label>
+    <select id="regionSelect"></select>
+  </div>
+  <div>
+    <label>은행 선택</label>
+    <select id="bankSelect">
+      <option value="all">전체 은행 평균 (합산)</option>
+      <option value="woori">우리은행</option>
+      <option value="shinhan">신한은행</option>
+      <option value="hana">하나은행</option>
+    </select>
+  </div>
+  <div>
+    <label>설치 대수 (n) — <span id="nOut">3</span>대</label>
+    <input type="range" id="nSlider" min="2" max="15" step="1" value="3">
+  </div>
+</div>
+
+<div class="info-box" id="regionInfo"></div>
+<div class="bank-warn" id="bankWarn"></div>
+
+<div class="metrics">
+  <div class="metric-card"><p class="metric-label">평균 대기시간</p><p class="metric-value" id="wqOut">-</p></div>
+  <div class="metric-card"><p class="metric-label">이용률(ρ)</p><p class="metric-value" id="rhoOut">-</p></div>
+  <div class="metric-card highlight"><p class="metric-label">연간 순편익</p><p class="metric-value" id="netOut">-</p></div>
+</div>
+
+<div class="recommend-box" id="recommendBox"></div>
+
+<p class="section-title">설치대수를 바꾸면 순편익이 어떻게 변하는지</p>
+<div class="chart-wrap"><canvas id="chart"></canvas></div>
+
+<hr class="divider">
+<p class="section-title" style="margin-top:0;">민감도분석 — 가정을 직접 바꿔보기</p>
+<div class="row2">
+  <div>
+    <label>키오스크 설치비 — <span id="capexOut">2,500만원</span></label>
+    <input type="range" id="capexSlider" min="1600" max="3000" step="100" value="2500">
+  </div>
+  <div>
+    <label>창구 감축비율 (키오스크 n대당 1명)</label>
+    <select id="ratioSelect">
+      <option value="1">1대당 1명 (후하게)</option>
+      <option value="2" selected>2대당 1명 (기본)</option>
+      <option value="3">3대당 1명 (박하게)</option>
+    </select>
+  </div>
+</div>
+<div class="sens-summary" id="sensSummary"></div>
+
+<div class="scroll-divider">↓ 참고자료 — 직접 값을 입력해보는 계산기 (보조용) ↓</div>
+
+<div class="panel">
+  <p class="panel-title">다른 지역 직접 계산하기</p>
+  <div class="row3">
+    <div class="name-field">
+      <label>지역 이름</label>
+      <input type="text" id="customName" value="우리 지점">
+    </div>
+    <div>
+      <label>시간당 방문 고객 수</label>
+      <div class="stepper">
+        <button onclick="stepValue('customLambda', -1)">−</button>
+        <input type="text" id="customLambda" value="10.00">
+        <button onclick="stepValue('customLambda', 1)">+</button>
+      </div>
+    </div>
+    <div>
+      <label>지금 창구(직원) 수</label>
+      <div class="stepper">
+        <button onclick="stepValue('customTellers', -1)">−</button>
+        <input type="text" id="customTellers" value="5">
+        <button onclick="stepValue('customTellers', 1)">+</button>
+      </div>
+    </div>
+  </div>
+  <div class="row2" style="grid-template-columns: 1fr 2fr;">
+    <div>
+      <label>고객 1명 처리 시간 (분)</label>
+      <div class="stepper">
+        <button onclick="stepValue('customService', -0.1)">−</button>
+        <input type="text" id="customService" value="10.70">
+        <button onclick="stepValue('customService', 0.1)">+</button>
+      </div>
+    </div>
+    <div></div>
+  </div>
+
+  <button class="calc-btn" onclick="runCustomCalculation()">계산하기</button>
+
+  <div class="results-row">
+    <div><p class="result-label">추천 설치</p><p class="result-value"><span id="customResultN">-</span>대</p></div>
+    <div><p class="result-label">1년 예상 이익</p><p class="result-value" id="customResultNet">-</p></div>
+    <div><p class="result-label">예상 대기</p><p class="result-value" id="customResultWq">-</p></div>
+  </div>
+
+  <div class="chart-grid2">
+    <div>
+      <p class="chart-title2">대수별 예상 이익</p>
+      <div class="chart-wrap2"><canvas id="profitChart"></canvas></div>
+    </div>
+    <div>
+      <p class="chart-title2">대수별 예상 대기시간</p>
+      <div class="chart-wrap2"><canvas id="waitChart"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<div class="panel">
+  <p class="panel-title">추천 대수 기준 — 돈이 어디서 오고 가는지</p>
+  <div class="breakdown-wrap"><canvas id="breakdownChart"></canvas></div>
+</div>
+
+<div class="note">
+  위 계산기는 25개 구 시뮬레이터와 별개로, 임의의 숫자를 직접 넣어볼 수 있는 보조 도구입니다.
+  실측 파라미터(서비스시간 변동계수, 도착 변동계수)는 은행 전체 가중평균값을 공통 적용합니다.
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
+<script src="js/data.js"></script>
+<script src="js/calc.js"></script>
+<script src="js/main.js"></script>
+<script src="js/reference-calculator.js"></script>
+</body>
+</html>
