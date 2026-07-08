@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>은행 무인기기(STM/ITM) 설치 시뮬레이터</title>
+<style>
+  :root {
+    --navy: #1F3B57;
+    --blue: #2E6F9E;
+    --lightblue: #EAF2F8;
+    --green: #0F6E56;
+    --lightgreen: #E8F5EE;
+    --gray: #666666;
+    --border: #DDDDDD;
+  }
+  body {
+    font-family: -apple-system, "Segoe UI", "Noto Sans KR", sans-serif;
+    max-width: 760px;
+    margin: 40px auto;
+    padding: 0 20px;
+    color: #222;
+    line-height: 1.6;
+  }
+  h1 { font-size: 20px; color: var(--navy); margin-bottom: 4px; }
+  .subtitle { font-size: 13px; color: var(--gray); margin-bottom: 20px; }
+  .banner {
+    display: flex; gap: 8px; align-items: center;
+    background: var(--lightblue); border: 1px solid var(--blue);
+    border-radius: 8px; padding: 10px 14px; font-size: 13px; color: var(--blue);
+    margin-bottom: 20px;
+  }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  label { font-size: 13px; color: var(--gray); display: block; margin-bottom: 4px; }
+  select, input[type="range"] { width: 100%; box-sizing: border-box; }
+  select { padding: 8px; border-radius: 6px; border: 1px solid var(--border); }
+  .info-box {
+    display: flex; gap: 16px; flex-wrap: wrap; font-size: 12.5px; color: var(--gray);
+    background: #F7F8FA; border-radius: 8px; padding: 10px 14px; margin-bottom: 16px;
+  }
+  .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+  .metric-card { background: #F7F8FA; border-radius: 8px; padding: 14px; }
+  .metric-card.highlight { background: var(--lightgreen); grid-column: span 2; }
+  .metric-label { font-size: 12.5px; color: var(--gray); margin: 0 0 4px; }
+  .metric-value { font-size: 20px; font-weight: 600; margin: 0; }
+  .metric-card.highlight .metric-value { color: var(--green); }
+  .recommend-box {
+    background: var(--lightblue); border-radius: 8px; padding: 12px 14px;
+    font-size: 13px; color: var(--blue); margin-bottom: 20px;
+  }
+  .chart-wrap { position: relative; width: 100%; height: 240px; margin-bottom: 24px; }
+  hr { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
+  .sens-summary { font-size: 12.5px; color: var(--gray); background: #F7F8FA; border-radius: 8px; padding: 10px 14px; }
+  .section-title { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; margin-bottom: 10px; }
+</style>
+</head>
+<body>
+
+<h1>서울 25개 구 은행 무인금융기기(STM/ITM) 설치 시뮬레이터</h1>
+<p class="subtitle">동작구 실측 3개 은행(사당·상도·이수, 표본 177명) 기반 · Sakasegawa G/G/c 근사식</p>
+
+<div class="banner">
+  인구는 실제값(2026.4 기준), 고령비율은 9개 구 실측·16개 구 추정. baseTellers는 동작구 실측 앵커 대비 은행지점수 비례 추정.
+</div>
+
+<div class="row">
+  <div>
+    <label for="regionSelect">구 선택</label>
+    <select id="regionSelect"></select>
+  </div>
+  <div>
+    <label>설치 대수 (n) — <span id="nOut">3</span>대</label>
+    <input type="range" id="nSlider" min="2" max="15" step="1" value="3">
+  </div>
+</div>
+
+<div class="info-box" id="regionInfo"></div>
+
+<div class="metrics">
+  <div class="metric-card">
+    <p class="metric-label">평균 대기시간</p>
+    <p class="metric-value" id="wqOut">-</p>
+  </div>
+  <div class="metric-card">
+    <p class="metric-label">이용률(ρ)</p>
+    <p class="metric-value" id="rhoOut">-</p>
+  </div>
+  <div class="metric-card highlight">
+    <p class="metric-label">연간 순편익</p>
+    <p class="metric-value" id="netOut">-</p>
+  </div>
+</div>
+
+<div class="recommend-box" id="recommendBox"></div>
+
+<p class="section-title">설치대수를 바꾸면 순편익이 어떻게 변하는지</p>
+<div class="chart-wrap"><canvas id="chart"></canvas></div>
+
+<hr>
+
+<p class="section-title">민감도분석 — 가정을 직접 바꿔보기</p>
+<div class="row">
+  <div>
+    <label>키오스크 설치비 — <span id="capexOut">2,500만원</span></label>
+    <input type="range" id="capexSlider" min="1600" max="3000" step="100" value="2500">
+  </div>
+  <div>
+    <label>창구 감축비율 (키오스크 n대당 1명)</label>
+    <select id="ratioSelect">
+      <option value="1">1대당 1명 (후하게)</option>
+      <option value="2" selected>2대당 1명 (기본)</option>
+      <option value="3">3대당 1명 (박하게)</option>
+    </select>
+  </div>
+</div>
+<div class="sens-summary" id="sensSummary"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+/* ======================================================================
+   1. 실측 앵커 상수 (동작구 3개 은행 현장관찰 기반)
+   ====================================================================== */
+const ANCHOR_POP = 385000;        // 동작구 인구(명)
+const ANCHOR_LAMBDA = 18.51;      // 동작구 실측 시간당 도착률(명/시간)
+const ANCHOR_BRANCHES = 35;       // 동작구 은행 지점수
+const ANCHOR_TELLERS = 6.67;      // 동작구 실측 평균 창구인력(사당2·상도13·이수5의 평균)
+
+const MU_GENERAL_POOLED = 10.17;  // 일반고객 평균 서비스시간(분) — 3개 은행 표본가중평균
+const MU_ELDERLY_POOLED = 13.10;  // 고령고객 평균 서비스시간(분) — 3개 은행 표본가중평균
+const SCV_POOLED = 0.917;         // 서비스시간 변동계수제곱(Cs²) — 혼합분포 공식(law of total variance)
+const CA2_POOLED = 1.212;         // 도착간격 변동계수제곱(Ca²) — 실측 도착시각 데이터에서 계산
+
+/* ======================================================================
+   2. 비용·정책 파라미터 (가정치 — 필요시 여기서 수정)
+   ====================================================================== */
+const SLA_MIN = 7.5;                       // 목표 대기시간(분), 문헌 기반 가정치
+const OPERATING_HOURS = 7;                 // 일일 운영시간
+const TELLER_WAGE_ANNUAL = 115000000;      // 창구직원 연봉(원), 은행연합회 공시 평균
+const KIOSK_OPEX_MONTHLY = 150000;         // 키오스크 월 운영비(원)
+const KIOSK_DEPRECIATION_YEARS = 5;
+const COMPLIANCE_COST_PER_UNIT = 2000000;  // 키오스크 대당 준법감시 비용 증가분(원/년)
+const LOSS_PER_ABANDON = 20000;            // 이탈 1건당 손실(원)
+const ABANDON_CENTER_MIN = 15;             // 이탈 중심값(분), 실측 이탈 5건 평균
+const ABANDON_SLOPE = 3.3;                 // 기울기, 실측 표준편차(약 6.5분) x sqrt(3)/pi 로 역산
+
+/* ======================================================================
+   3. 25개 구 데이터
+      population: 인구(실제값, 2026.4 서울열린데이터광장)
+      branches: 은행 지점수(은행연합회 자료 집계)
+      elderlyRatio: 고령비율 (realElderly=true면 실측, false면 추정)
+   ====================================================================== */
+const regions = [
+  { name: "송파구", population: 657000, branches: 136, elderlyRatio: 0.161, realElderly: true },
+  { name: "강남구", population: 559000, branches: 148, elderlyRatio: 0.156, realElderly: true },
+  { name: "강서구", population: 555000, branches: 50,  elderlyRatio: 0.175, realElderly: false },
+  { name: "강동구", population: 504000, branches: 78,  elderlyRatio: 0.165, realElderly: false },
+  { name: "관악구", population: 498000, branches: 60,  elderlyRatio: 0.170, realElderly: false },
+  { name: "노원구", population: 488000, branches: 30,  elderlyRatio: 0.210, realElderly: false },
+  { name: "은평구", population: 458000, branches: 39,  elderlyRatio: 0.195, realElderly: false },
+  { name: "성북구", population: 438000, branches: 44,  elderlyRatio: 0.190, realElderly: false },
+  { name: "양천구", population: 426000, branches: 62,  elderlyRatio: 0.170, realElderly: false },
+  { name: "서초구", population: 420000, branches: 121, elderlyRatio: 0.157, realElderly: true },
+  { name: "구로구", population: 406000, branches: 48,  elderlyRatio: 0.190, realElderly: false },
+  { name: "영등포구", population: 394000, branches: 107, elderlyRatio: 0.180, realElderly: false },
+  { name: "동작구", population: 385000, branches: 35,  elderlyRatio: 0.170, realElderly: false },
+  { name: "중랑구", population: 384000, branches: 38,  elderlyRatio: 0.200, realElderly: true },
+  { name: "동대문구", population: 373000, branches: 64,  elderlyRatio: 0.200, realElderly: false },
+  { name: "마포구", population: 369000, branches: 50,  elderlyRatio: 0.155, realElderly: true },
+  { name: "광진구", population: 349000, branches: 30,  elderlyRatio: 0.164, realElderly: true },
+  { name: "서대문구", population: 317000, branches: 67,  elderlyRatio: 0.185, realElderly: false },
+  { name: "도봉구", population: 302000, branches: 35,  elderlyRatio: 0.222, realElderly: true },
+  { name: "강북구", population: 286000, branches: 22,  elderlyRatio: 0.232, realElderly: true },
+  { name: "성동구", population: 283000, branches: 45,  elderlyRatio: 0.170, realElderly: false },
+  { name: "금천구", population: 236000, branches: 44,  elderlyRatio: 0.190, realElderly: false },
+  { name: "용산구", population: 213000, branches: 51,  elderlyRatio: 0.190, realElderly: false },
+  { name: "종로구", population: 148000, branches: 91,  elderlyRatio: 0.210, realElderly: false },
+  { name: "중구",   population: 128000, branches: 141, elderlyRatio: 0.207, realElderly: true }
+];
+
+// 파생값 계산: 시간당 도착률(λ), 추정 창구인력(baseTellers)
+const VISIT_RATE_PER_1000 = ANCHOR_LAMBDA / ANCHOR_POP * 1000;
+regions.forEach(function (r) {
+  r.lambdaPerHour = VISIT_RATE_PER_1000 * r.population / 1000;
+  r.baseTellers = Math.max(2, Math.round((r.branches / ANCHOR_BRANCHES) * ANCHOR_TELLERS));
+});
+
+/* ======================================================================
+   4. 핵심 계산 함수
+   ====================================================================== */
+
+// Sakasegawa(G/G/c) 근사식으로 평균 대기시간(Wq)과 이용률(rho) 계산
+function sakasegawaWq(lambdaPerMin, muPerMin, n) {
+  const rho = lambdaPerMin / (n * muPerMin);
+  if (rho >= 1) return { Wq: Infinity, rho: rho };
+  const exponent = Math.sqrt(2 * (n + 1)) - 1;
+  const Wq = ((CA2_POOLED + SCV_POOLED) / 2) * (Math.pow(rho, exponent) / (n * (1 - rho))) * (1 / muPerMin);
+  return { Wq: Wq, rho: rho };
+}
+
+// 고령비율 가중평균으로 평균 서비스시간(분) → 서비스율(muPerMin) 계산
+function getMuPerMin(region) {
+  const meanServiceMin = region.elderlyRatio * MU_ELDERLY_POOLED + (1 - region.elderlyRatio) * MU_GENERAL_POOLED;
+  return 1 / meanServiceMin;
+}
+
+// n* : SLA(목표 대기시간)를 만족하는 최소 설치대수를 2부터 순차 탐색
+function findNStar(region, muPerMin, nMax) {
+  const lambdaPerMin = region.lambdaPerHour / 60;
+  for (let n = 2; n <= nMax; n++) {
+    const result = sakasegawaWq(lambdaPerMin, muPerMin, n);
+    if (result.Wq <= SLA_MIN) return n;
+  }
+  return nMax;
+}
+
+// 설치대수 n에서의 대기시간, 이용률, 연간 순편익을 계산
+// 핵심: 인력감축은 n이 아니라 effectiveN = min(n, nStar)에 연동시켜,
+//       n이 nStar를 넘는 초과 설치분에는 추가 인력감축을 인정하지 않는다.
+//       (이 캡이 없으면 창구인력 많고 수요 낮은 지역에서 n이 무한정 커지는 버그가 발생함)
+function computeForN(region, n, capex, reductionRatio, nStar) {
+  const muPerMin = getMuPerMin(region);
+  const lambdaPerMin = region.lambdaPerHour / 60;
+  const wqResult = sakasegawaWq(lambdaPerMin, muPerMin, n);
+  const Wq = wqResult.Wq;
+  const rho = wqResult.rho;
+
+  const pAbandon = (Wq === Infinity) ? 1 : 1 / (1 + Math.exp(-(Wq - ABANDON_CENTER_MIN) / ABANDON_SLOPE));
+
+  const effectiveN = Math.min(n, nStar);
+  const reducible = Math.floor(effectiveN / reductionRatio);
+  const remainingStaff = Math.max(1, region.baseTellers - Math.min(region.baseTellers - 1, reducible));
+  const tellersSaved = region.baseTellers - remainingStaff;
+
+  const dailyVisits = Math.round(region.lambdaPerHour * OPERATING_HOURS);
+
+  const savings = tellersSaved * TELLER_WAGE_ANNUAL;
+  const capexAnnual = (capex * n) / KIOSK_DEPRECIATION_YEARS;
+  const opexAnnual = KIOSK_OPEX_MONTHLY * 12 * n;
+  const complianceCost = COMPLIANCE_COST_PER_UNIT * n;
+  const abandonLoss = (Wq === Infinity)
+    ? dailyVisits * 365 * LOSS_PER_ABANDON
+    : dailyVisits * 365 * pAbandon * LOSS_PER_ABANDON;
+
+  const netBenefit = savings - capexAnnual - opexAnnual - complianceCost - abandonLoss;
+
+  return { Wq: Wq, rho: rho, netBenefit: netBenefit, tellersSaved: tellersSaved, remainingStaff: remainingStaff };
+}
+
+// n=2부터 nMax까지 스캔해서 순편익이 최대가 되는 n을 찾는다 (포화 상태인 n은 제외)
+function findBestN(region, capex, reductionRatio, nStar, nMax) {
+  let bestN = null;
+  let bestNet = -Infinity;
+  for (let n = 2; n <= nMax; n++) {
+    const r = computeForN(region, n, capex, reductionRatio, nStar);
+    if (r.Wq !== Infinity && r.netBenefit > bestNet) {
+      bestNet = r.netBenefit;
+      bestN = n;
+    }
+  }
+  return { bestN: bestN, bestNet: bestNet };
+}
+
+/* ======================================================================
+   5. UI 렌더링
+   ====================================================================== */
+const sel = document.getElementById('regionSelect');
+regions.forEach(function (r, i) {
+  const opt = document.createElement('option');
+  opt.value = i;
+  opt.textContent = r.name;
+  if (r.name === '동작구') opt.selected = true;
+  sel.appendChild(opt);
+});
+
+let chart;
+
+function render() {
+  const region = regions[sel.value];
+  const n = parseInt(document.getElementById('nSlider').value, 10);
+  const capex = parseInt(document.getElementById('capexSlider').value, 10) * 10000;
+  const ratio = parseInt(document.getElementById('ratioSelect').value, 10);
+
+  document.getElementById('nOut').textContent = n;
+  document.getElementById('capexOut').textContent = (capex / 10000).toLocaleString('ko-KR') + '만원';
+
+  const muPerMin = getMuPerMin(region);
+  const nStar = findNStar(region, muPerMin, 25);
+
+  document.getElementById('regionInfo').innerHTML =
+    '<span>인구 ' + region.population.toLocaleString('ko-KR') + '명</span>' +
+    '<span>고령비율 ' + Math.round(region.elderlyRatio * 100) + '% (' + (region.realElderly ? '실측' : '추정') + ')</span>' +
+    '<span>λ ' + region.lambdaPerHour.toFixed(1) + '명/h</span>' +
+    '<span>추정 창구인력 ' + region.baseTellers + '명</span>';
+
+  const current = computeForN(region, n, capex, ratio, nStar);
+  document.getElementById('wqOut').textContent = current.Wq === Infinity ? '포화' : current.Wq.toFixed(1) + '분';
+  document.getElementById('rhoOut').textContent = (current.rho * 100).toFixed(0) + '%';
+  document.getElementById('netOut').textContent = current.Wq === Infinity ? '계산불가' : Math.round(current.netBenefit / 10000).toLocaleString('ko-KR') + '만원';
+
+  const nMax = 15;
+  const best = findBestN(region, capex, ratio, nStar, nMax);
+
+  document.getElementById('recommendBox').innerHTML =
+    '<strong>' + region.name + '</strong>의 추천 설치대수는 <strong>' + best.bestN + '대</strong> ' +
+    '(SLA ' + SLA_MIN + '분 충족 최소대수 n*=' + nStar + '대, 연간 순편익 ' +
+    Math.round(best.bestNet / 10000).toLocaleString('ko-KR') + '만원)';
+
+  const nRange = [];
+  for (let i = 2; i <= nMax; i++) nRange.push(i);
+  const netByN = nRange.map(function (nn) { return computeForN(region, nn, capex, ratio, nStar).netBenefit; });
+  const pointColors = nRange.map(function (nn) { return nn === best.bestN ? '#0f6e56' : '#378ADD'; });
+  const pointRadii = nRange.map(function (nn) { return nn === n ? 7 : (nn === best.bestN ? 6 : 3); });
+
+  if (chart) {
+    chart.data.datasets[0].data = netByN.map(function (v) { return Math.round(v / 10000); });
+    chart.data.datasets[0].pointBackgroundColor = pointColors;
+    chart.data.datasets[0].pointRadius = pointRadii;
+    chart.update();
+  } else {
+    chart = new Chart(document.getElementById('chart'), {
+      type: 'line',
+      data: {
+        labels: nRange.map(function (v) { return v + '대'; }),
+        datasets: [{
+          label: '연간 순편익(만원)',
+          data: netByN.map(function (v) { return Math.round(v / 10000); }),
+          borderColor: '#378ADD',
+          backgroundColor: 'rgba(55,138,221,0.1)',
+          pointBackgroundColor: pointColors,
+          pointRadius: pointRadii,
+          borderWidth: 2,
+          fill: true,
+          tension: 0.25
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: { y: { ticks: { callback: function (v) { return v.toLocaleString('ko-KR') + '만'; } } } }
+      }
+    });
+  }
+
+  document.getElementById('sensSummary').innerHTML =
+    '지금 설정(설치비 ' + (capex / 10000).toLocaleString('ko-KR') + '만원, 감축비율 ' + ratio + '대당 1명) 기준 추천 대수는 ' +
+    best.bestN + '대입니다. 슬라이더와 감축비율을 바꿔가며 이 추천이 얼마나 안정적인지 직접 확인해보세요.';
+}
+
+document.getElementById('regionSelect').addEventListener('change', render);
+document.getElementById('nSlider').addEventListener('input', render);
+document.getElementById('capexSlider').addEventListener('input', render);
+document.getElementById('ratioSelect').addEventListener('change', render);
+
+render();
+</script>
+</body>
+</html>
