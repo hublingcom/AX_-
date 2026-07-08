@@ -1,44 +1,4 @@
 /* ======================================================================
-   1. 실측 앵커 상수 — 은행별 (동작구 3개 은행 현장관찰 기반)
-   ====================================================================== */
-const BANKS = {
-  all: {
-    label: "전체 은행 평균",
-    muGeneral: 10.17, muElderly: 13.10, scv: 0.917, ca2: 1.212,
-    anchorBranches: 35, anchorTellers: 6.67, anchorLambda: 18.51, anchorPop: 385000
-  },
-  woori: {
-    label: "우리은행",
-    muGeneral: 6.87, muElderly: 6.73, scv: 0.632, ca2: 1.239,
-    anchorBranches: 9, anchorTellers: 2, anchorLambda: 18.78
-  },
-  shinhan: {
-    label: "신한은행",
-    muGeneral: 14.3, muElderly: 20.95, scv: 1.055, ca2: 0.924,
-    anchorBranches: 2, anchorTellers: 13, anchorLambda: 19.4
-  },
-  hana: {
-    label: "하나은행",
-    muGeneral: 9.10, muElderly: 13.42, scv: 1.050, ca2: 1.411,
-    anchorBranches: 7, anchorTellers: 5, anchorLambda: 17.35
-  }
-};
-const ANCHOR_ELDERLY_RATIO = 0.522;
-
-/* ======================================================================
-   2. 비용·정책 파라미터 (가정치)
-   ====================================================================== */
-const SLA_MIN = 7.5;
-const OPERATING_HOURS = 7;
-const TELLER_WAGE_ANNUAL = 115000000;
-const KIOSK_OPEX_MONTHLY = 150000;
-const KIOSK_DEPRECIATION_YEARS = 5;
-const COMPLIANCE_COST_PER_UNIT = 2000000;
-const LOSS_PER_ABANDON = 20000;
-const ABANDON_CENTER_MIN = 15;
-const ABANDON_SLOPE = 3.3;
-
-/* ======================================================================
    3. 25개 구 데이터: 인구(전체은행 모드용) + 은행별 지점수
    ====================================================================== */
 const regions = [
@@ -68,4 +28,3 @@ const regions = [
   { name: "종로구", population: 148000, elderlyRatio: 0.210, branches: { all: 91,  woori: 13, shinhan: 11, hana: 13 } },
   { name: "중구",   population: 128000, elderlyRatio: 0.207, branches: { all: 141, woori: 23, shinhan: 31, hana: 15 } }
 ];
-

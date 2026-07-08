@@ -44,6 +44,35 @@ function runCustomCalculation() {
   renderProfitChart(nRange, results, bestN);
   renderWaitChart(nRange, results);
   renderBreakdownChart(bestResult);
+
+  const scenarioTitle = (document.getElementById('customName').value || '').trim() || '시나리오';
+  const exportEnabled = nRange.length > 0;
+
+  lastCustomExport = exportEnabled ? {
+    type: 'custom',
+    exportedAt: new Date(),
+    title: scenarioTitle,
+    inputs: {
+      lambdaPerHour: lambdaPerHour,
+      baseTellers: baseTellers,
+      serviceMin: serviceMin,
+      muPerMin: muPerMin,
+      ca2: CUSTOM_CA2,
+      cs2: CUSTOM_CS2,
+      capex: CUSTOM_CAPEX,
+      ratio: CUSTOM_RATIO
+    },
+    fixedAssumptions: '전체은행 평균 변동계수, capex 2,500만원, 감축 2대당 1명',
+    nStar: nStar,
+    bestN: bestN,
+    bestIdx: bestIdx,
+    bestResult: bestResult,
+    nRange: nRange,
+    results: results,
+    chartInstances: [profitChart, waitChart, breakdownChart],
+    chartLabels: ['대수별 예상 이익', '대수별 예상 대기시간', '추천 대수 기준 비용분해']
+  } : null;
+  setExportButtonState('exportCustomBtn', exportEnabled);
 }
 
 function renderProfitChart(nRange, results, bestN) {

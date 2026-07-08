@@ -32,6 +32,8 @@ function renderMain() {
     document.getElementById('netOut').textContent = '-';
     document.getElementById('recommendBox').textContent = '';
     if (mainChart) { mainChart.destroy(); mainChart = null; }
+    lastSimExport = null;
+    setExportButtonState('exportSimBtn', false);
     return;
   }
   warnBox.style.display = 'none';
@@ -62,8 +64,8 @@ function renderMain() {
     '<strong>' + region.name + ' · ' + BANKS[bankKey].label + '</strong>의 추천 설치대수는 <strong>' + bestN + '대</strong> ' +
     '(SLA ' + SLA_MIN + '분 충족 최소대수 n*=' + nStar + '대, 연간 순편익 ' + Math.round(bestNet / 10000).toLocaleString('ko-KR') + '만원)';
 
-  const pointColors = nRange.map(function (nn) { return nn === bestN ? '#0f6e56' : '#378ADD'; });
-  const pointRadii = nRange.map(function (nn) { return nn === n ? 7 : (nn === bestN ? 6 : 3); });
+  const pointColors = nRange.map(function (nn) { return nn === n ? '#1F3B57' : (nn === bestN ? '#0f6e56' : '#378ADD'); });
+  const pointRadii = nRange.map(function (nn) { return nn === n ? 10 : (nn === bestN ? 6 : 3); });
   const netData = results.map(function (r) { return Math.round(r.netBenefit / 10000); });
 
   if (mainChart) {
@@ -94,6 +96,38 @@ function renderMain() {
   document.getElementById('sensSummary').innerHTML =
     '지금 설정(설치비 ' + (capex / 10000).toLocaleString('ko-KR') + '만원, 감축비율 ' + ratio + '대당 1명, ' + BANKS[bankKey].label + ') 기준 추천 대수는 ' +
     bestN + '대입니다. 은행·구·설치비·감축비율을 바꿔가며 결과가 얼마나 안정적인지 확인해보세요.';
+
+  lastSimExport = {
+    type: 'sim',
+    exportedAt: new Date(),
+    title: region.name + ' · ' + BANKS[bankKey].label,
+    regionName: region.name,
+    bankKey: bankKey,
+    bankLabel: BANKS[bankKey].label,
+    population: region.population,
+    branchCount: params.branchCount,
+    meanServiceMin: 1 / params.muPerMin,
+    inputs: {
+      n: n,
+      capex: capex,
+      ratio: ratio,
+      lambdaPerHour: params.lambdaPerHour,
+      baseTellers: params.baseTellers,
+      ca2: params.ca2,
+      cs2: params.cs2
+    },
+    nStar: nStar,
+    bestN: bestN,
+    bestIdx: bestIdx,
+    currentN: n,
+    currentResult: current,
+    bestResult: results[bestIdx],
+    nRange: nRange,
+    results: results,
+    chartInstances: [mainChart],
+    chartLabels: ['설치대수별 연간 순편익']
+  };
+  setExportButtonState('exportSimBtn', true);
 }
 
 regionSel.addEventListener('change', renderMain);
