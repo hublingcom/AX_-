@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>행정동 취약점수 · 은행 디지털 전환 DSS</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" as="style" crossorigin
+  href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css">
+
+<link rel="stylesheet" href="css/style.css?v=3">
+</head>
+<body>
+
+  <div id="loading-overlay">
+    <div class="loading-box">
+      <div class="spinner"></div>
+      <p id="loading-text">데이터를 불러오는 중입니다…</p>
+      <div class="loading-bar-track"><div class="loading-bar-fill" id="loading-bar"></div></div>
+    </div>
+  </div>
+
+  <header class="app-header">
+    <div class="brand">
+      <span class="brand-mark">DSS</span>
+      <div class="brand-text">
+        <h1>은행 디지털 전환 의사결정 지원 대시보드</h1>
+        <p>사전영향평가 · 지점 근접성 · ITM 대기행렬 시뮬레이션</p>
+      </div>
+    </div>
+    <nav class="tabs">
+      <a class="nav-link tab-btn" href="index.html">지점 지도</a>
+      <a class="nav-link tab-btn" href="table.html">행정동 취약점수</a>
+      <a class="nav-link tab-btn" href="simulator.html">ITM 설치 시뮬레이터</a>
+    </nav>
+  </header>
+
+  <section class="view view-table-page">
+    <div class="table-toolbar">
+      <input type="search" id="t-search" placeholder="시도 · 시군구 · 행정동 검색…">
+      <select id="t-sido"><option value="">전체 시도</option></select>
+      <select id="t-sort">
+        <option value="score-desc">취약점수 높은 순</option>
+        <option value="score-asc">취약점수 낮은 순</option>
+        <option value="pop-desc">인구 많은 순</option>
+        <option value="elder-desc">고령인구비율 높은 순</option>
+      </select>
+      <span class="table-count" id="table-count"></span>
+    </div>
+    <div class="table-scroll">
+      <table id="vuln-table">
+        <thead>
+          <tr>
+            <th>시도</th><th>시군구</th><th>행정동</th>
+            <th class="num">총인구수</th><th class="num">고령인구비율</th><th class="num">장애인비율</th>
+            <th class="num">수급권자비율</th><th class="num">농어업인비율</th><th class="num">취약점수(A)</th>
+          </tr>
+        </thead>
+        <tbody id="vuln-tbody"></tbody>
+      </table>
+    </div>
+    <div class="table-pager">
+      <button id="p-prev">← 이전</button>
+      <span id="p-info"></span>
+      <button id="p-next">다음 →</button>
+    </div>
+  </section>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="js/common.js"></script>
+  <script src="js/table.js"></script>
+</body>
+</html>
