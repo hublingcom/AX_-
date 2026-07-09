@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ITM 설치 시뮬레이터 · 은행 디지털 전환 DSS</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" as="style" crossorigin
+  href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css">
+
+<link rel="stylesheet" href="css/style.css?v=3">
+</head>
+<body>
+
+  <div id="loading-overlay">
+    <div class="loading-box">
+      <div class="spinner"></div>
+      <p id="loading-text">데이터를 불러오는 중입니다…</p>
+      <div class="loading-bar-track"><div class="loading-bar-fill" id="loading-bar"></div></div>
+    </div>
+  </div>
+
+  <header class="app-header">
+    <div class="brand">
+      <span class="brand-mark">DSS</span>
+      <div class="brand-text">
+        <h1>은행 디지털 전환 의사결정 지원 대시보드</h1>
+        <p>사전영향평가 · 지점 근접성 · ITM 대기행렬 시뮬레이션</p>
+      </div>
+    </div>
+    <nav class="tabs">
+      <a class="nav-link tab-btn" href="index.html">지점 지도</a>
+      <a class="nav-link tab-btn" href="table.html">행정동 취약점수</a>
+      <a class="nav-link tab-btn" href="simulator.html">ITM 설치 시뮬레이터</a>
+    </nav>
+  </header>
+
+  <section class="view">
+    <aside class="sidebar">
+      <div class="sidebar-block">
+        <h2>대상 지역</h2>
+        <label class="field">
+          <span>시도</span>
+          <select id="s-sido"><option value="">선택하세요</option></select>
+        </label>
+        <label class="field">
+          <span>시군구</span>
+          <select id="s-sgg" disabled><option value="">시도를 먼저 선택하세요</option></select>
+        </label>
+        <label class="field">
+          <span>행정동</span>
+          <select id="s-dong" disabled><option value="">시군구를 먼저 선택하세요</option></select>
+        </label>
+      </div>
+
+      <div class="sidebar-block">
+        <h2>가정값 (조정 가능)</h2>
+        <label class="field">
+          <span>목표 SLA · 평균 대기시간(분)</span>
+          <input type="number" id="p-sla" value="7.5" step="0.5" min="1">
+        </label>
+        <label class="field">
+          <span>ITM 대당 연간비용(만원)</span>
+          <input type="number" id="p-cost" value="800" step="50" min="0">
+        </label>
+        <label class="field">
+          <span>지점 폐쇄 시 절감액(만원/지점/년)</span>
+          <input type="number" id="p-savings" value="8000" step="500" min="0">
+        </label>
+        <label class="field">
+          <span>고객 대기시간 가치(원/분·명)</span>
+          <input type="number" id="p-waitvalue" value="500" step="50" min="0">
+        </label>
+        <button id="s-run" class="run-btn">시뮬레이션 실행</button>
+      </div>
+
+      <div class="sidebar-block legend-block">
+        <h2>계산 방식</h2>
+        <p class="note-text">
+          선택한 행정동의 인구·고령인구비율로 은행 이용 수요(λ)를 추정합니다 (현장관찰 캘리브레이션 기본이용률 0.6837% 적용).<br><br>
+          Wq(n) = Sakasegawa(G/G/c) 근사식<br>
+          순편익(n) = 지점폐쇄 절감액 − ITM 운영비(n) − 대기비용(n)<br><br>
+          n* = SLA를 충족하는 최소 설치대수
+        </p>
+      </div>
+    </aside>
+
+    <div class="sim-main">
+      <div id="sim-empty" class="sim-empty">
+        <p>왼쪽에서 시도·시군구·행정동을 선택하고 <b>시뮬레이션 실행</b>을 눌러주세요.</p>
+      </div>
+
+      <div id="sim-result" hidden>
+        <div class="callout" id="sim-callout"></div>
+
+        <div class="sim-grid">
+          <div class="sim-card">
+            <h3>설치대수를 바꾸면 순편익이 어떻게 변하는지</h3>
+            <div id="sim-chart"></div>
+          </div>
+          <div class="sim-card sim-card-side">
+            <h3>대상 지역 요약</h3>
+            <div class="detail-metrics" id="sim-summary"></div>
+            <h3 style="margin-top:18px;">설치대수별 상세</h3>
+            <div class="sim-table-wrap">
+              <table class="sim-table" id="sim-detail-table">
+                <thead><tr><th>n</th><th>Wq(분)</th><th>ρ</th><th>순편익(만원)</th></tr></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="js/common.js"></script>
+  <script src="js/simulator.js"></script>
+</body>
+</html>
