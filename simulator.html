@@ -9,7 +9,7 @@
 <link rel="stylesheet" as="style" crossorigin
   href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css">
 
-<link rel="stylesheet" href="css/style.css?v=3">
+<link rel="stylesheet" href="css/style.css?v=4">
 </head>
 <body>
 
@@ -39,7 +39,7 @@
   <section class="view">
     <aside class="sidebar">
       <div class="sidebar-block">
-        <h2>대상 지역</h2>
+        <h2>폐쇄 대상 지점</h2>
         <label class="field">
           <span>시도</span>
           <select id="s-sido"><option value="">선택하세요</option></select>
@@ -52,65 +52,73 @@
           <span>행정동</span>
           <select id="s-dong" disabled><option value="">시군구를 먼저 선택하세요</option></select>
         </label>
-      </div>
-
-      <div class="sidebar-block">
-        <h2>가정값 (조정 가능)</h2>
         <label class="field">
-          <span>목표 SLA · 평균 대기시간(분)</span>
-          <input type="number" id="p-sla" value="7.5" step="0.5" min="1">
+          <span>지점(은행)</span>
+          <select id="s-branch" disabled><option value="">행정동을 먼저 선택하세요</option></select>
         </label>
-        <label class="field">
-          <span>ITM 대당 연간비용(만원)</span>
-          <input type="number" id="p-cost" value="800" step="50" min="0">
-        </label>
-        <label class="field">
-          <span>지점 폐쇄 시 절감액(만원/지점/년)</span>
-          <input type="number" id="p-savings" value="8000" step="500" min="0">
-        </label>
-        <label class="field">
-          <span>고객 대기시간 가치(원/분·명)</span>
-          <input type="number" id="p-waitvalue" value="500" step="50" min="0">
-        </label>
-        <button id="s-run" class="run-btn">시뮬레이션 실행</button>
       </div>
 
       <div class="sidebar-block legend-block">
         <h2>계산 방식</h2>
         <p class="note-text">
-          선택한 행정동의 인구·고령인구비율로 은행 이용 수요(λ)를 추정합니다 (현장관찰 캘리브레이션 기본이용률 0.6837% 적용).<br><br>
-          Wq(n) = Sakasegawa(G/G/c) 근사식<br>
-          순편익(n) = 지점폐쇄 절감액 − ITM 운영비(n) − 대기비용(n)<br><br>
-          n* = SLA를 충족하는 최소 설치대수
+          선택한 지점을 폐쇄하고 그 자리에 ITM을 설치한다고 가정합니다.<br><br>
+          Sakasegawa(G/G/c) 근사식으로 목표 대기시간을 만족하는 <b>최소 ITM 대수</b>를 산출합니다.<br><br>
+          아래 3개 값은 선택한 지점의 실측 데이터로 자동 채워지며, 직접 조정할 수 있습니다.
         </p>
       </div>
     </aside>
 
     <div class="sim-main">
       <div id="sim-empty" class="sim-empty">
-        <p>왼쪽에서 시도·시군구·행정동을 선택하고 <b>시뮬레이션 실행</b>을 눌러주세요.</p>
+        <p>왼쪽에서 폐쇄할 지점(시도·시군구·행정동·은행)을 선택해주세요.</p>
       </div>
 
       <div id="sim-result" hidden>
-        <div class="callout" id="sim-callout"></div>
-
-        <div class="sim-grid">
+        <div class="sim-grid-top">
           <div class="sim-card">
-            <h3>설치대수를 바꾸면 순편익이 어떻게 변하는지</h3>
-            <div id="sim-chart"></div>
+            <h3>수요 가정</h3>
+
+            <label class="field slider-field">
+              <span>피크 시간당 고객 λ <b id="v-lambda-out">25</b>명/시</span>
+              <input type="range" id="v-lambda" min="1" max="150" step="1" value="25">
+            </label>
+
+            <label class="field slider-field">
+              <span>ITM 처리시간 <b id="v-svc-out">4</b>분</span>
+              <input type="range" id="v-svc" min="1" max="15" step="0.5" value="4">
+            </label>
+
+            <label class="field slider-field">
+              <span>목표 대기시간 <b id="v-sla-out">7</b>분</span>
+              <input type="range" id="v-sla" min="1" max="20" step="0.5" value="7">
+            </label>
           </div>
-          <div class="sim-card sim-card-side">
-            <h3>대상 지역 요약</h3>
-            <div class="detail-metrics" id="sim-summary"></div>
-            <h3 style="margin-top:18px;">설치대수별 상세</h3>
-            <div class="sim-table-wrap">
-              <table class="sim-table" id="sim-detail-table">
-                <thead><tr><th>n</th><th>Wq(분)</th><th>ρ</th><th>순편익(만원)</th></tr></thead>
-                <tbody></tbody>
-              </table>
+
+          <div class="sim-card sim-recommend">
+            <h3>권고 결과</h3>
+            <div class="recommend-box">
+              <div class="recommend-n"><span id="rec-n">3</span><span class="recommend-unit">대</span></div>
+              <div class="recommend-text">
+                <p id="rec-desc">목표 대기 7분 이내 최소 대수입니다.</p>
+                <p id="rec-sub" class="recommend-sub">예상 대기 0.6분 · 이용률 56%</p>
+              </div>
             </div>
           </div>
         </div>
+
+        <div class="sim-card" style="margin-top:18px;">
+          <h3>설치 대수별 비교</h3>
+          <div class="sim-table-wrap sim-table-wrap-wide">
+            <table class="sim-table" id="sim-detail-table">
+              <thead><tr>
+                <th>대수</th><th>이용률</th><th>평균 대기</th><th>월 대기고객</th><th>초기투자</th><th>월 운영</th>
+              </tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+
+        <p class="ai-note">AI가 결정하지 않습니다. 데이터 근거를 제공하고 최종 판단은 은행이 합니다.</p>
       </div>
     </div>
   </section>
