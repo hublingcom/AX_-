@@ -75,7 +75,7 @@ function waitColor(w){
 function typeColor(t){ return t === 'ATM전용' ? '#93A1B0' : '#1D4E89'; }
 
 function initMap(){
-  state.map = L.map('map', { zoomControl:true, minZoom:6, maxZoom:18 }).setView([36.5, 127.8], 7);
+  state.map = L.map('map', { zoomControl:true, minZoom:6, maxZoom:18, preferCanvas:true }).setView([36.5, 127.8], 7);
 
   L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
     attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
@@ -95,6 +95,11 @@ function initMap(){
     },
   });
   state.map.addLayer(state.cluster);
+
+  // Leaflet이 초기화 시점의 레이아웃(폰트 로딩 전 등)을 캐싱해 마커 클릭 판정이 어긋나는 문제 방지
+  requestAnimationFrame(() => state.map.invalidateSize());
+  setTimeout(() => state.map.invalidateSize(), 400);
+  window.addEventListener('resize', () => state.map.invalidateSize());
 }
 
 function currentFilters(){
@@ -110,6 +115,7 @@ function renderMarkers(){
   state.cluster.clearLayers();
 
   let shown = 0, waitSum = 0, waitN = 0, atmN = 0;
+  const markers = [];
 
   state.banks.forEach(b => {
     if (sido && b[COL.sido] !== sido) return;
@@ -125,8 +131,10 @@ function renderMarkers(){
       radius: 5, weight: 1, color: '#fff', fillColor: color, fillOpacity: .9,
     });
     marker.on('click', () => openDetail(b));
-    state.cluster.addLayer(marker);
+    markers.push(marker);
   });
+
+  state.cluster.addLayers(markers);
 
   document.getElementById('stat-count').textContent = shown.toLocaleString();
   document.getElementById('stat-wait').textContent = waitN ? (waitSum/waitN).toFixed(1) : '–';
