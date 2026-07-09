@@ -2,230 +2,148 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>은행 무인기기(STM/ITM) 설치 시뮬레이터</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>은행 디지털 전환 DSS · 데이터 대시보드</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" as="style" crossorigin
+  href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css">
+
+<!-- Leaflet -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.css" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.Default.css" />
+
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 
-<header class="page-header">
-  <h1>서울 25개 구 · 은행 무인금융기기(STM/ITM) 설치 시뮬레이터</h1>
-  <p class="subtitle">동작구 실측 3개 은행(우리·신한·하나) 기반 · Sakasegawa G/G/c 근사식 · SLA 2단계 최적화</p>
-</header>
-
-<div class="app-shell">
-
-  <aside class="sidebar" id="sidebar">
-    <div class="banner">
-      은행마다 지점 위치와 고객층이 다르므로, 은행을 선택하면 그 은행의 실측 서비스시간·변동계수와
-      해당 구의 그 은행 지점수를 기준으로 λ·창구인력을 다시 계산합니다.
+  <!-- ===== 로딩 오버레이 ===== -->
+  <div id="loading-overlay">
+    <div class="loading-box">
+      <div class="spinner"></div>
+      <p id="loading-text">데이터를 불러오는 중입니다…</p>
+      <div class="loading-bar-track"><div class="loading-bar-fill" id="loading-bar"></div></div>
     </div>
+  </div>
 
-    <div class="sidebar-group">
-      <label>구 선택</label>
-      <select id="regionSelect"></select>
-    </div>
-
-    <div class="sidebar-group">
-      <label>은행 선택</label>
-      <select id="bankSelect">
-        <option value="all">전체 은행 평균 (합산)</option>
-        <option value="woori">우리은행</option>
-        <option value="shinhan">신한은행</option>
-        <option value="hana">하나은행</option>
-      </select>
-    </div>
-
-    <div class="sidebar-group">
-      <label>설치 대수 (n) — <span id="nOut">3</span>대</label>
-      <div class="slider-wrap">
-        <span class="slider-tooltip" id="nSliderTooltip">3대</span>
-        <input type="range" id="nSlider" min="2" max="15" step="1" value="3" list="nTicks">
-        <datalist id="nTicks">
-          <option value="2"></option>
-          <option value="3"></option>
-          <option value="4"></option>
-          <option value="5"></option>
-          <option value="6"></option>
-          <option value="7"></option>
-          <option value="8"></option>
-          <option value="9"></option>
-          <option value="10"></option>
-          <option value="11"></option>
-          <option value="12"></option>
-          <option value="13"></option>
-          <option value="14"></option>
-          <option value="15"></option>
-        </datalist>
+  <!-- ===== 헤더 ===== -->
+  <header class="app-header">
+    <div class="brand">
+      <span class="brand-mark">DSS</span>
+      <div class="brand-text">
+        <h1>은행 디지털 전환 의사결정 지원 대시보드</h1>
+        <p>사전영향평가 · 지점 근접성 · ITM 대기행렬 시뮬레이션</p>
       </div>
     </div>
-
-    <div class="info-box" id="regionInfo"></div>
-    <div class="bank-warn" id="bankWarn"></div>
-
-    <hr class="divider">
-
-    <div class="sidebar-group">
-      <p class="sidebar-title has-tooltip">
-        민감도 설정
-        <span class="info-icon-wrap">
-          <span class="info-icon" tabindex="0">ℹ</span>
-        </span>
-        <span class="info-tooltip info-tooltip--full" id="sensTooltip"></span>
-      </p>
-      <label>키오스크 설치비 — <span id="capexOut">2,500만원</span></label>
-      <input type="range" id="capexSlider" min="1600" max="3000" step="100" value="2500">
-    </div>
-
-    <div class="sidebar-group">
-      <label>창구 감축비율 (키오스크 n대당 1명)</label>
-      <select id="ratioSelect">
-        <option value="1">1대당 1명 (후하게)</option>
-        <option value="2" selected>2대당 1명 (기본)</option>
-        <option value="3">3대당 1명 (박하게)</option>
-      </select>
-    </div>
-
-    <div class="sens-summary" id="sensSummary"></div>
-  </aside>
-
-  <main class="main-area">
-
-    <nav class="tabs">
-      <button type="button" class="tab-btn active" data-tab="sim">구별 시뮬레이터</button>
-      <button type="button" class="tab-btn" data-tab="custom">직접 계산기</button>
+    <nav class="tabs" role="tablist">
+      <button class="tab-btn is-active" data-tab="map" role="tab">지점 지도</button>
+      <button class="tab-btn" data-tab="table" role="tab">행정동 취약점수</button>
     </nav>
+  </header>
 
-    <section class="tab-panel active" id="tabPanel-sim">
-      <div class="hero-card">
-        <div class="hero-metrics-group">
-          <div class="hero-metric">
-            <p class="hero-label">추천 설치 대수</p>
-            <p class="hero-value hero-value--n" id="heroN">-</p>
-          </div>
-          <div class="hero-metric">
-            <p class="hero-label">연간 순편익</p>
-            <p class="hero-value hero-value--net" id="heroNet">-</p>
-          </div>
-          <div class="hero-metric">
-            <p class="hero-label">평균 대기시간</p>
-            <p class="hero-value" id="heroWq">-</p>
-          </div>
-        </div>
-        <!-- 결과를 확인한 직후 바로 눈에 띄도록 Hero 카드 안에 배치.
-             기존엔 recommendBox와 metrics 사이에 있어 결과 흐름을 끊었고
-             현재 구/은행 컨텍스트(Hero 수치)와도 시각적으로 분리돼 있었음. -->
-        <button type="button" id="exportSimBtn" class="export-btn hero-export-btn" disabled onclick="exportSimResults()">
-          현재 결과 Excel로 저장
-        </button>
-      </div>
+  <!-- ===== 지도 뷰 ===== -->
+  <section class="view" id="view-map">
+    <aside class="sidebar">
+      <div class="sidebar-block">
+        <h2>필터</h2>
 
-      <div class="result-context-row">
-        <div class="recommend-box" id="recommendBox"></div>
-        <span class="info-icon-wrap has-tooltip">
-          <span class="info-icon" tabindex="0">ℹ</span>
-          <span class="info-tooltip" id="regionInfoTooltip"></span>
-        </span>
-      </div>
+        <label class="field">
+          <span>지역(시도)</span>
+          <select id="f-sido"><option value="">전체</option></select>
+        </label>
 
-      <div class="metrics">
-        <div class="metric-card"><p class="metric-label">평균 대기시간</p><p class="metric-value" id="wqOut">-</p></div>
-        <div class="metric-card"><p class="metric-label">이용률(ρ)</p><p class="metric-value" id="rhoOut">-</p></div>
-        <div class="metric-card highlight"><p class="metric-label">연간 순편익</p><p class="metric-value" id="netOut">-</p></div>
-      </div>
+        <label class="field">
+          <span>지점 유형</span>
+          <select id="f-type">
+            <option value="">전체</option>
+            <option value="영업점(창구+ATM)">영업점(창구+ATM)</option>
+            <option value="ATM전용">ATM전용</option>
+          </select>
+        </label>
 
-      <div>
-        <p class="section-title">설치대수를 바꾸면 순편익이 어떻게 변하는지</p>
-        <div class="chart-wrap"><canvas id="chart"></canvas></div>
-      </div>
-    </section>
+        <label class="field">
+          <span>대기시간 색상 기준</span>
+          <select id="f-colorby">
+            <option value="wait">평균 대기시간(대표)</option>
+            <option value="type">지점 유형</option>
+          </select>
+        </label>
 
-    <section class="tab-panel" id="tabPanel-custom">
-      <div class="panel">
-        <p class="panel-title">다른 지역 직접 계산하기</p>
-        <div class="row3">
-          <div class="name-field">
-            <label>지역 이름</label>
-            <input type="text" id="customName" value="우리 지점">
-          </div>
-          <div>
-            <label>시간당 방문 고객 수</label>
-            <div class="stepper">
-              <button onclick="stepValue('customLambda', -1)">−</button>
-              <input type="text" id="customLambda" value="10.00">
-              <button onclick="stepValue('customLambda', 1)">+</button>
-            </div>
-          </div>
-          <div>
-            <label>지금 창구(직원) 수</label>
-            <div class="stepper">
-              <button onclick="stepValue('customTellers', -1)">−</button>
-              <input type="text" id="customTellers" value="5">
-              <button onclick="stepValue('customTellers', 1)">+</button>
-            </div>
-          </div>
-        </div>
-        <div class="row2" style="grid-template-columns: 1fr 2fr;">
-          <div>
-            <label>고객 1명 처리 시간 (분)</label>
-            <div class="stepper">
-              <button onclick="stepValue('customService', -0.1)">−</button>
-              <input type="text" id="customService" value="10.70">
-              <button onclick="stepValue('customService', 0.1)">+</button>
-            </div>
-          </div>
-          <div></div>
-        </div>
-
-        <div class="action-row">
-          <button class="calc-btn" onclick="runCustomCalculation()">계산하기</button>
-          <button type="button" id="exportCustomBtn" class="export-btn" onclick="exportCustomResults()">
-            현재 결과 Excel로 저장
-          </button>
-        </div>
-
-        <div class="results-row">
-          <div><p class="result-label">추천 설치</p><p class="result-value"><span id="customResultN">-</span>대</p></div>
-          <div><p class="result-label">1년 예상 이익</p><p class="result-value" id="customResultNet">-</p></div>
-          <div><p class="result-label">예상 대기</p><p class="result-value" id="customResultWq">-</p></div>
-        </div>
-
-        <div class="chart-grid2">
-          <div>
-            <p class="chart-title2">대수별 예상 이익</p>
-            <div class="chart-wrap2"><canvas id="profitChart"></canvas></div>
-          </div>
-          <div>
-            <p class="chart-title2">대수별 예상 대기시간</p>
-            <div class="chart-wrap2"><canvas id="waitChart"></canvas></div>
-          </div>
+        <div class="field checkbox-field">
+          <label><input type="checkbox" id="f-showpairs" checked> 클릭 시 10km 이내 동일회사 지점 연결선 표시</label>
         </div>
       </div>
 
-      <div class="panel">
-        <p class="panel-title">추천 대수 기준 — 돈이 어디서 오고 가는지</p>
-        <div class="breakdown-wrap"><canvas id="breakdownChart"></canvas></div>
+      <div class="sidebar-block stats-block">
+        <h2>요약</h2>
+        <div class="stat-grid" id="stat-grid">
+          <div class="stat-card"><span class="stat-num" id="stat-count">–</span><span class="stat-label">표시 중인 지점</span></div>
+          <div class="stat-card"><span class="stat-num" id="stat-wait">–</span><span class="stat-label">평균 대기시간(분)</span></div>
+          <div class="stat-card"><span class="stat-num" id="stat-atm">–</span><span class="stat-label">ATM전용 비중</span></div>
+          <div class="stat-card"><span class="stat-num" id="stat-pairs">–</span><span class="stat-label">10km 인접쌍(선택 지역)</span></div>
+        </div>
       </div>
 
-      <div class="note">
-        <span>위 계산기는 25개 구 시뮬레이터와 별개로, 임의의 숫자를 직접 넣어볼 수 있는 보조 도구입니다.</span>
-        <span>실측 파라미터(서비스시간 변동계수, 도착 변동계수)는 은행 전체 가중평균값을 공통 적용합니다.</span>
+      <div class="sidebar-block legend-block">
+        <h2>범례 · 대기시간(분)</h2>
+        <div class="legend-scale">
+          <span class="dot" style="background:#2E7D5B"></span> 0–3
+          <span class="dot" style="background:#8CB84B"></span> 3–6
+          <span class="dot" style="background:#E8B23D"></span> 6–10
+          <span class="dot" style="background:#DE7A3A"></span> 10–15
+          <span class="dot" style="background:#C6432E"></span> 15+
+        </div>
       </div>
-    </section>
+    </aside>
 
-  </main>
-</div>
+    <div class="map-wrap">
+      <div id="map"></div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
-<script src="data/banks.js"></script>
-<script src="data/policy.js"></script>
-<script src="data/regions.js"></script>
-<script src="js/calc.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
-<script src="js/export.js"></script>
-<script src="js/main.js"></script>
-<script src="js/reference-calculator.js"></script>
-<script src="js/ui.js"></script>
+      <div class="detail-panel" id="detail-panel">
+        <button class="detail-close" id="detail-close" aria-label="닫기">✕</button>
+        <div id="detail-content"><p class="detail-empty">지도에서 지점을 클릭하면 상세 정보가 여기에 표시됩니다.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 테이블 뷰 ===== -->
+  <section class="view" id="view-table" hidden>
+    <div class="table-toolbar">
+      <input type="search" id="t-search" placeholder="시도 · 시군구 · 행정동 검색…">
+      <select id="t-sido"><option value="">전체 시도</option></select>
+      <select id="t-sort">
+        <option value="score-desc">취약점수 높은 순</option>
+        <option value="score-asc">취약점수 낮은 순</option>
+        <option value="pop-desc">인구 많은 순</option>
+        <option value="elder-desc">고령인구비율 높은 순</option>
+      </select>
+      <span class="table-count" id="table-count"></span>
+    </div>
+    <div class="table-scroll">
+      <table id="vuln-table">
+        <thead>
+          <tr>
+            <th>시도</th><th>시군구</th><th>행정동</th>
+            <th>총인구수</th><th>고령인구비율</th><th>장애인비율</th>
+            <th>수급권자비율</th><th>농어업인비율</th><th>취약점수(A)</th>
+          </tr>
+        </thead>
+        <tbody id="vuln-tbody"></tbody>
+      </table>
+    </div>
+    <div class="table-pager">
+      <button id="p-prev">← 이전</button>
+      <span id="p-info"></span>
+      <button id="p-next">다음 →</button>
+    </div>
+  </section>
+
+  <!-- ===== 라이브러리 ===== -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/leaflet.markercluster.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+  <script src="js/main.js"></script>
 </body>
 </html>
