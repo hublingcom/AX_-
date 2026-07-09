@@ -94,6 +94,7 @@ body{
   padding:8px 18px; font-size:13.5px; font-weight:600;
   color:var(--text-dim); border-radius:99px;
   font-family:var(--font-ui);
+  text-decoration:none; display:inline-block;
   transition:background .15s ease, color .15s ease;
 }
 .tab-btn.is-active{ background:var(--primary); color:#fff; }
@@ -103,7 +104,6 @@ body{
    레이아웃 공통
    ========================================================= */
 .view{ flex:1; display:flex; min-height:0; }
-.view[hidden]{ display:none !important; }
 
 /* =========================================================
    사이드바
@@ -121,7 +121,7 @@ body{
 }
 .field{ display:block; margin-bottom:12px; }
 .field span{ display:block; font-size:12.5px; color:var(--text-dim); margin-bottom:5px; font-weight:600; }
-.field select, .field input[type=search]{
+.field select, .field input[type=search], .field input[type=number]{
   width:100%; padding:9px 10px; border:1px solid var(--border);
   border-radius:var(--radius-s); background:var(--surface);
   font-family:var(--font-ui); font-size:13.5px; color:var(--text);
@@ -206,7 +206,7 @@ body{
 /* =========================================================
    테이블 뷰
    ========================================================= */
-#view-table{ flex-direction:column; padding:20px 28px; overflow:hidden; }
+.view-table-page{ flex-direction:column; padding:20px 28px; overflow:hidden; }
 .table-toolbar{ display:flex; gap:10px; align-items:center; margin-bottom:14px; flex-wrap:wrap; }
 .table-toolbar input, .table-toolbar select{
   padding:9px 12px; border:1px solid var(--border); border-radius:var(--radius-s);
@@ -221,7 +221,7 @@ body{
   flex:1; overflow:auto; background:var(--surface);
   border:1px solid var(--border); border-radius:var(--radius-m);
 }
-table{ width:100%; border-collapse:collapse; font-size:13px; }
+table{ width:100%; min-width:920px; border-collapse:collapse; font-size:13px; }
 thead th{
   position:sticky; top:0; z-index:1;
   background:var(--surface-alt); color:var(--text-dim);
@@ -257,4 +257,80 @@ td.num, th.num{ text-align:right; font-family:var(--font-mono); }
   .sidebar{ width:100%; border-right:none; border-bottom:1px solid var(--border); flex-direction:row; flex-wrap:wrap; }
   .sidebar-block{ flex:1 1 220px; }
   .detail-panel{ width:calc(100% - 32px); }
+  .sim-grid{ grid-template-columns:1fr; }
 }
+
+/* =========================================================
+   ITM 시뮬레이터 페이지
+   ========================================================= */
+.run-btn{
+  width:100%; margin-top:6px; padding:11px; border:none; border-radius:var(--radius-s);
+  background:var(--primary); color:#fff; font-family:var(--font-ui); font-weight:700;
+  font-size:13.5px; cursor:pointer; transition:background .15s ease;
+}
+.run-btn:hover{ background:var(--primary-dark); }
+.note-text{ font-size:12px; color:var(--text-dim); line-height:1.7; }
+
+.sim-main{ flex:1; overflow-y:auto; padding:24px 28px; }
+.sim-empty{ display:flex; align-items:center; justify-content:center; height:60vh; color:var(--text-faint); font-size:14px; text-align:center; }
+
+.callout{
+  background:var(--primary-tint); border:1px solid #C9DCF0;
+  border-radius:var(--radius-m); padding:14px 18px; font-size:14px;
+  margin-bottom:20px; color:var(--text);
+}
+.callout b{ color:var(--primary-dark); }
+.callout-warn{ background:var(--accent-tint); border-color:#F0D9A8; }
+.callout-warn b{ color:#9A5B12; }
+
+.sim-grid{ display:grid; grid-template-columns:1.5fr 1fr; gap:18px; align-items:start; }
+.sim-card{
+  background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-l);
+  padding:20px; box-shadow:var(--shadow-s);
+}
+.sim-card h3{ font-size:13px; font-weight:700; color:var(--text-dim); margin:0 0 14px; }
+
+.sim-table-wrap{ max-height:280px; overflow-y:auto; border:1px solid var(--border); border-radius:var(--radius-s); }
+.sim-table{ width:100%; border-collapse:collapse; font-size:12.5px; }
+.sim-table th{
+  position:sticky; top:0; background:var(--surface-alt); color:var(--text-dim);
+  font-weight:700; text-align:right; padding:8px 10px; border-bottom:1px solid var(--border);
+}
+.sim-table th:first-child, .sim-table td:first-child{ text-align:left; }
+.sim-table td{ text-align:right; padding:7px 10px; border-bottom:1px solid var(--border); font-family:var(--font-mono); }
+.sim-table tr.row-highlight td{ background:var(--accent-tint); font-weight:700; color:#9A5B12; }
+
+.chart-svg{ width:100%; height:auto; }
+.chart-grid{ stroke:var(--border); stroke-width:1; }
+.chart-zero{ stroke:var(--text-faint); stroke-width:1.2; stroke-dasharray:3,3; }
+.chart-area{ fill:var(--primary-tint); opacity:.6; }
+.chart-line{ fill:none; stroke:var(--primary); stroke-width:2.4; }
+.chart-axis-label{ font-family:var(--font-mono); font-size:10.5px; fill:var(--text-dim); }
+
+/* ---- 시뮬레이터 v2: 지점별 슬라이더 UI ---- */
+.sim-grid-top{ display:grid; grid-template-columns:1fr 1fr; gap:18px; align-items:stretch; }
+.slider-field{ margin-bottom:22px; }
+.slider-field span{ display:flex; justify-content:space-between; font-size:13px; color:var(--text-dim); margin-bottom:8px; }
+.slider-field span b{ color:var(--primary-dark); font-family:var(--font-mono); font-size:14px; }
+.slider-field input[type=range]{
+  width:100%; accent-color:var(--primary); height:4px; cursor:pointer;
+}
+
+.sim-recommend{ display:flex; flex-direction:column; justify-content:center; }
+.recommend-box{ display:flex; align-items:center; gap:20px; }
+.recommend-n{ display:flex; align-items:baseline; gap:4px; flex-shrink:0; }
+.recommend-n span:first-child{ font-family:var(--font-mono); font-size:52px; font-weight:700; color:var(--primary-dark); line-height:1; }
+.recommend-unit{ font-size:16px; color:var(--text-dim); font-weight:600; }
+.recommend-text p{ margin:0; }
+#rec-desc{ font-size:13.5px; color:var(--text); font-weight:600; margin-bottom:4px; }
+.recommend-sub{ font-size:12.5px; color:var(--text-dim); }
+
+.sim-table-wrap-wide{ max-height:none; }
+.sim-table-wrap-wide .sim-table th, .sim-table-wrap-wide .sim-table td{ text-align:center; }
+.sim-table-wrap-wide .sim-table td:first-child{ text-align:left; }
+
+.tag{ display:inline-block; padding:1px 8px; border-radius:99px; font-size:10.5px; font-weight:700; margin-left:6px; }
+.tag-good{ background:#E6F3EC; color:#2E7D5B; }
+.tag-bad{ background:#FAE1DC; color:#B23423; }
+
+.ai-note{ text-align:center; font-size:11.5px; color:var(--text-faint); margin-top:20px; }
